@@ -12,6 +12,7 @@ OPTS:
   -i FNAME  Ignore changes to FNAME even if appears in COMMAND or WATCH
   -d        'Daemon' mode - run task in background and restart as needed
   -q        Print less info
+  -a        Always restart when command quits
  
 WATCH: Files listed after -- but are watched for changes
 
@@ -36,6 +37,7 @@ def main():
   IGNORE = set()
   BACKGROUND = False
   QUIET = False
+  ALWAYS = False
 
   args = sys.argv[1:]
   while (args or [''])[0].startswith('-'):
@@ -48,6 +50,8 @@ def main():
       BACKGROUND = True
     elif opt == '-q':
       QUIET = True
+    elif opt == '-a':
+      ALWAYS = True
     else:
       HEAD = ' 2>&1 | head ' + opt
 
@@ -79,12 +83,12 @@ def main():
 
     if not BACKGROUND:
 
-      if mtime != m:
+      if (mtime != m) or ALWAYS:
         #os.system('clear')
         print '$ ' + command
         os.system(command + HEAD)
         mtime = m
-        if not QUIET:
+        if not (QUIET or ALWAYS):
           print "Watching:", ', '.join(filenames)
 
       time.sleep(1)
