@@ -89,9 +89,12 @@ def main():
         os.system(command + HEAD)
         mtime = m
         if not (QUIET or ALWAYS):
-          print "Watching:", ', '.join(filenames)
+          print "\nWatching:", ', '.join(filenames)
 
-      time.sleep(1)
+      if enterKeyHasBeenHit():
+        mtime = None
+      else:
+        time.sleep(1)
 
     else:
 
@@ -122,6 +125,15 @@ def main():
 def usage():
     print __doc__
     sys.exit()
+
+
+def enterKeyHasBeenHit():
+  import select
+  i,o,e = select.select([sys.stdin],[],[],0.0001)
+  for s in i:
+    if s == sys.stdin:
+      return sys.stdin.readline()
+  return False
 
 
 def restart(pid, command):
