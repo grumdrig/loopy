@@ -10,10 +10,11 @@ from being watched.)
 OPTS:
   -#        Run command through head -# (for some integer #)
   -i FNAME  Ignore changes to FNAME even if appears in COMMAND or WATCH
+  -I        Ignore all command line names not explicitly in WATCH
   -d        'Daemon' mode - run task in background and restart as needed
   -q        Print less info
   -a        Always restart when command quits
- 
+
 WATCH: Files listed after -- but are watched for changes
 
 EXAMPLES:
@@ -35,6 +36,7 @@ import os, sys, time, itertools, signal
 def main():
   HEAD = ''
   IGNORE = set()
+  AUTOWATCH = True
   BACKGROUND = False
   QUIET = False
   ALWAYS = False
@@ -46,6 +48,8 @@ def main():
       usage()
     if opt == '-i':
       IGNORE.add(args.pop(0))
+    elif opt == '-I':
+      AUTOWATCH = False
     elif opt == '-d':
       BACKGROUND = True
     elif opt == '-q':
@@ -68,7 +72,7 @@ def main():
 
   command = cfi.pop(0)
   filenames = [a for a,b in zip(command, [0] + command[:-1]) if b != '>']
-  filenames = set([f for f in filenames if os.path.exists(f)])
+  filenames = set([f for f in filenames if os.path.exists(f) and AUTOWATCH])
   filenames |= set(cfi and cfi.pop(0))
   filenames -= IGNORE
 
@@ -89,7 +93,8 @@ def main():
         os.system(command + HEAD)
         mtime = m
         if not (QUIET or ALWAYS):
-          print "\nWatching:", ', '.join(filenames)
+          print "############################################################"
+          print "Watching:", ', '.join(filenames)
 
       if enterKeyHasBeenHit():
         mtime = None
