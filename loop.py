@@ -14,6 +14,7 @@ OPTS:
   -d        'Daemon' mode - run task in background and restart as needed
   -q        Print less info
   -a        Always restart when command quits
+  -f        Fast mode - shorter sleep time before watching for changes
 
 WATCH: Files listed after -- but are watched for changes
 
@@ -40,6 +41,7 @@ def main():
   BACKGROUND = False
   QUIET = False
   ALWAYS = False
+  SLEEPTIME = 1
 
   args = sys.argv[1:]
   while (args or [''])[0].startswith('-'):
@@ -56,6 +58,8 @@ def main():
       QUIET = True
     elif opt == '-a':
       ALWAYS = True
+    elif opt == '-f':
+      SLEEPTIME /= 4
     else:
       HEAD = ' 2>&1 | head ' + opt
 
@@ -99,7 +103,7 @@ def main():
       if enterKeyHasBeenHit():
         mtime = None
       else:
-        time.sleep(1)
+        time.sleep(SLEEPTIME)
 
     else:
 
@@ -113,7 +117,7 @@ def main():
           pid = restart(pid, command)
 
       try:
-        time.sleep(1)
+        time.sleep(SLEEPTIME)
       except KeyboardInterrupt:
         print "\nKilling", pid, "^C again to quit"
         if pid:
