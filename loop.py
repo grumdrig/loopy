@@ -2,6 +2,7 @@
 
 """Usage: loop.py OPTS COMMAND [-- WATCH...]
        loop.py OPTS COMMAND [--WATCH...] ++ OPTS COMMAND [--WATCH...] ...
+       loop.py [-F LOOPFILE]
 
 Wait for changes to FILEs NAMEd on the command line, Run the COMMAND
 whenever one of them changes. (However, filenames following a '>' in
@@ -14,15 +15,24 @@ OPTS:
   -I        Ignore all command line names not explicitly in WATCH
   -d        'Daemon' mode - start task in background and restart as needed
   -q        Print less info
+  -V        Print more info
   -a        Always restart when command quits
   -f        Faster polling for changes (applies to all command watch loops)
   -x        Run command once on startup without waiting for changes
+  -F FNAME  Load the loopfile FNAME
 
 WATCH: Files listed after -- are (only) watched for changes
 
 Multiple command watch loops can be specified by separating them with ++.
 
-Specifying any other command line options causes the output of the command
+Specifying a loopfile with -F causes the options and commands to be read
+from lines in the loopfile. Each nonblank line is parsed as if they were
+on the command line. Lines beginning with "#" are treated as comments.
+
+Running loop.py without any arguments causes it to look for the loopfile
+named "Loopfile" in the current directory.
+
+Specifying any unrecognized command line options causes the output of the command
 to be piped through `head`, and the option is passed to `head`.
 
 Hitting the enter key causes all commands to run (and/or daemons to be restarted).
@@ -53,7 +63,20 @@ SLEEPTIME = 1
 
 
 def main():
-  tasks = [list(g) for k,g in itertools.groupby(sys.argv[1:], lambda x: x != '++') if k]
+  args = sys.argv[1:]
+  LOOPFILE = None
+  if not args:
+    LOOPFILE = "Loopfile"
+  if (len(args) == 2) and (args[0] == '-F'):
+    LOOPFILE = args[1]
+    args = args[2:]
+  if LOOPFILE:
+    if not os.path.exists(LOOPFILE):
+      usage()
+    tasks = [line.split() for line in open(LOOPFILE, "rt").readlines() if line.strip() and line[0] != "#"]
+  else:
+    tasks = [list(g) for k,g in itertools.groupby(args, lambda x: x != '++') if k]
+
   tasks = map(lambda task: Task(task), tasks)
   while True:
     for task in tasks:
@@ -91,7 +114,7 @@ class Task:
     WAIT = True
     self.HEAD = ''
     self.BACKGROUND = False
-    self.QUIET = False
+    self.VERBOSITY = 0
     self.ALWAYS = False
     global SLEEPTIME
 
@@ -106,7 +129,9 @@ class Task:
       elif opt == '-d':
         self.BACKGROUND = True
       elif opt == '-q':
-        self.QUIET = True
+        self.VERBOSITY -= 1
+      elif opt == '-v':
+        self.VERBOSITY += 1
       elif opt == '-a':
         self.ALWAYS = True
       elif opt == '-f':
@@ -142,6 +167,9 @@ class Task:
     if WAIT and not self.BACKGROUND:
       self.mtime = [os.stat(filename).st_mtime for filename in self.filenames
                     if os.path.exists(filename)]
+    if self.VERBOSITY > 0:
+      print self.command, self.filenames
+
 
   def checkForChanges(self):
     m = [os.stat(filename).st_mtime for filename in self.filenames
@@ -155,7 +183,7 @@ class Task:
         print '$ ' + self.command
         os.system(self.command + self.HEAD)
         self.mtime = m
-        if not (self.QUIET or self.ALWAYS):
+        if not (self.VERBOSITY >= 0 or self.ALWAYS):
           print "############################################################"
           print "Watching:", ', '.join(self.filenames)
 
