@@ -77,7 +77,7 @@ def main():
 	else:
 		tasks = [list(g) for k,g in itertools.groupby(args, lambda x: x != '++') if k]
 
-	tasks = map(lambda task: Task(task), tasks)
+	tasks = map(Task, tasks)
 	while True:
 		for task in tasks:
 			task.checkForChanges()
@@ -172,7 +172,7 @@ class Task:
 			self.mtime = [os.stat(filename).st_mtime for filename in self.filenames
 										if os.path.exists(filename)]
 		if self.VERBOSITY > 0:
-			print self.command, self.filenames
+			print 'looping:', self.command, '--', ' '.join(self.filenames)
 
 
 	def checkForChanges(self):
