@@ -1,7 +1,8 @@
 #!/usr/bin/python
 
 """Usage: loop.py OPTS COMMAND [-- WATCH...]
-			 loop.py OPTS COMMAND [--WATCH...] ++ OPTS COMMAND [--WATCH...] ...
+			 loop.py OPTS COMMAND [-- WATCH...] ++ OPTS COMMAND [-- WATCH...] ...
+			 loop.py --for NAME in FILE do OPTS COMMAND [-- WATCH...] ...
 			 loop.py [-F LOOPFILE]
 
 Wait for changes to FILEs NAMEd on the command line, Run the COMMAND
@@ -34,6 +35,8 @@ on the command line. Lines beginning with "#" are treated as comments.
 Running loop.py without any arguments causes it to look for the loopfile
 named "Loopfile" in the current directory.
 
+Command loops can be duplicated for multiple files with `--for`.
+
 Hitting the enter key causes all commands to run (and/or daemons to be restarted).
 
 EXAMPLES:
@@ -43,19 +46,22 @@ EXAMPLES:
 	loop.py make test -- *.c *.h
 		Run make whenever a .c or .h file changes
 
-	loop.py sed s/day/night/ \< dayfile \> nightfile
+	loop.py sed s/day/night/ \\< dayfile \\> nightfile
 		Run sed whenever dayfile changes to produce nightfile. Note that
 		the io redirection operators must be escaped. Also note that
-		though nightfile is mentioned in the command, it's after a '>' and
-		therefore not watched.
+		though nightfile is mentioned in the command, it's after a '>'
+		and therefore not watched.
 
 	loop.py swiftc -emit-library helper.swift ++ swiftc -lhelper program.swift -- libhelper.dylib ++ ./program
 		Recompile the library "helper" when "helper.swift" changes. And:
 		Recompile "program" when program.swift or the library changes. And:
 		Run the program whenever it is regenerated.
+
+	loop.py --for FILE in *.c do cc -o FILE
+		Compile any C file that changes
 """
 
-import os, sys, time, itertools, signal
+import os, sys, time, itertools, signal, glob
 
 
 SLEEPTIME = 1
@@ -77,7 +83,29 @@ def main():
 	else:
 		tasks = [list(g) for k,g in itertools.groupby(args, lambda x: x != '++') if k]
 
+	# expand --for loops
+	print tasks, range(len(tasks)-1, -1, -1)
+	for i in range(len(tasks)-1, -1, -1):
+		print i
+		task = tasks[i]
+		print task
+		if task and (task[0] == "--for"):
+			try:
+				variable = task[1]
+				if task[2] != 'in':
+					usage()
+				ido = task.index('do')
+				values, task = task[3:ido], task[ido+1:]
+				if LOOPFILE:
+					values = [found for value in values for found in glob.glob(value)]
+				subtasks = map(lambda value: map(lambda a: a.replace(variable, value), task), values)
+				tasks[i:i+1] = subtasks
+
+			except IndexError:
+				usage()
+
 	tasks = map(Task, tasks)
+
 	while True:
 		for task in tasks:
 			task.checkForChanges()
