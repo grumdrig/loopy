@@ -72,23 +72,22 @@ def main():
 	LOOPFILE = None
 	if not args:
 		LOOPFILE = "Loopfile"
-	if (len(args) == 2) and (args[0] == '-F'):
+	if (len(args) >= 2) and (args[0] == '-F'):
 		LOOPFILE = args[1]
 		args = args[2:]
 	if LOOPFILE:
 		if not os.path.exists(LOOPFILE):
 			usage()
-
+		os.environ["#"] = str(len(args))
+		for i,a in enumerate(args):
+			os.environ[str(i+1)] = a
 		tasks = [os.path.expandvars(line).split() for line in open(LOOPFILE, "rt").readlines() if line.strip() and line[0] != "#"]
 	else:
 		tasks = [list(g) for k,g in itertools.groupby(args, lambda x: x != '++') if k]
 
 	# expand --for loops
-	print tasks, range(len(tasks)-1, -1, -1)
 	for i in range(len(tasks)-1, -1, -1):
-		print i
 		task = tasks[i]
-		print task
 		if task and (task[0] == "--for"):
 			try:
 				variable = task[1]
@@ -97,7 +96,7 @@ def main():
 				ido = task.index('do')
 				values, task = task[3:ido], task[ido+1:]
 				if LOOPFILE:
-					values = [found for value in values for found in glob.glob(value)]
+					values = [found for value in values for found in (glob.glob(value) if value != "$*" else args)]
 				subtasks = map(lambda value: map(lambda a: a.replace(variable, value), task), values)
 				tasks[i:i+1] = subtasks
 
@@ -215,7 +214,7 @@ class Task:
 				print '$ ' + self.command
 				os.system(self.command + self.HEAD)
 				self.mtime = m
-				if not (self.VERBOSITY >= 0 or self.ALWAYS):
+				if not (self.VERBOSITY < 0 or self.ALWAYS):
 					print "############################################################"
 					print "Watching:", ', '.join(self.filenames)
 
