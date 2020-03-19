@@ -11,6 +11,7 @@ from being watched.)
 
 OPTS:
   -#        Run command through head -# (for some integer #)
+  -w FNAME  Watch FNAME for changes
   -i FNAME  Ignore changes to FNAME even if appears in COMMAND or WATCH
   -I        Ignore all command line names not explicitly in WATCH
   -d        'Daemon' mode - start task in background and restart as needed
@@ -21,7 +22,8 @@ OPTS:
   -x        Run command once on startup without waiting for changes
   -F FNAME  Load the loopfile FNAME
 
-WATCH: Files listed after -- are (only) watched for changes
+WATCH: Files listed after -- or specified with -w are watched for changes
+       without being part of the command
 
 Multiple command watch loops can be specified by separating them with ++.
 
@@ -31,9 +33,6 @@ on the command line. Lines beginning with "#" are treated as comments.
 
 Running loop.py without any arguments causes it to look for the loopfile
 named "Loopfile" in the current directory.
-
-Specifying any unrecognized command line options causes the output of the command
-to be piped through `head`, and the option is passed to `head`.
 
 Hitting the enter key causes all commands to run (and/or daemons to be restarted).
 
@@ -110,6 +109,7 @@ def main():
 class Task:
   def __init__(self, args):
     IGNORE = set()
+    WATCH = set()
     AUTOWATCH = True
     WAIT = True
     self.HEAD = ''
@@ -122,7 +122,9 @@ class Task:
       opt = args.pop(0)
       if not args:
         usage()
-      if opt == '-i':
+      if opt == '-w':
+        WATCH.add(args.pop(0))
+      elif opt == '-i':
         IGNORE.add(args.pop(0))
       elif opt == '-I':
         AUTOWATCH = False
@@ -156,6 +158,7 @@ class Task:
     filenames = [a for a,b in zip(self.command, [0] + self.command[:-1]) if b != '>']
     filenames = set([f for f in filenames if os.path.exists(f) and AUTOWATCH])
     filenames |= set(cfi and cfi.pop(0))
+    filenames |= WATCH
     filenames -= IGNORE
     self.filenames = filenames
 
