@@ -72,7 +72,8 @@ def main():
   if LOOPFILE:
     if not os.path.exists(LOOPFILE):
       usage()
-    tasks = [line.split() for line in open(LOOPFILE, "rt").readlines() if line.strip() and line[0] != "#"]
+
+    tasks = [os.path.expandvars(line).split() for line in open(LOOPFILE, "rt").readlines() if line.strip() and line[0] != "#"]
   else:
     tasks = [list(g) for k,g in itertools.groupby(args, lambda x: x != '++') if k]
 
