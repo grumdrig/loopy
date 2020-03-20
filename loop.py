@@ -11,19 +11,23 @@ whenever one of them changes. (However, filenames following a '>' in
 the command are not watched. AND preceding a filename with @ keeps it
 from being watched.)
 
-OPTS:
+Initial OPTS:
+	-q        Print less info
+	-v        Print more info
+	-f        Faster polling for changes (applies to all command watch loops)
+	-F FNAME  Load the loopfile FNAME
+	-L        Same as `-F Loopfile`
+These options must come first, and apply to all command loops.
+
+Per-command OPTS:
 	-#        Run command through head -# (for some integer #)
 	-w FNAME  Watch FNAME for changes
 	-i FNAME  Ignore changes to FNAME even if appears in COMMAND or WATCH
 	-I        Ignore all command line names not explicitly in WATCH
 	-d        'Daemon' mode - start task in background and restart as needed
-	-q        Print less info
-	-v        Print more info
 	-a        Always restart when command quits
-	-f        Faster polling for changes (applies to all command watch loops)
 	-x        Run command once on startup without waiting for changes
-	-F FNAME  Load the loopfile FNAME
-	-L        Same as `-F Loopfile`
+	--for...  Explained below
 
 WATCH: Files listed after -- or specified with -w are watched for changes
 			 without being part of the command
@@ -40,7 +44,8 @@ These and other environment variables are substituted in the loopfile.
 Running loop.py without any arguments causes it to look for the loopfile
 named "Loopfile" in the current directory.
 
-Command loops can be duplicated for multiple files with `--for`.
+Command loops can be duplicated for multiple files with `--for`. The
+pattern is `--for VAR in ARG1 ARG2 ... do ...`.
 
 Hitting the enter key causes all commands to run (and/or daemons to be restarted).
 
@@ -76,16 +81,32 @@ import os, sys, time, itertools, signal, glob
 
 
 SLEEPTIME = 1
-
+VERBOSITY = 0
 
 def main():
+	global SLEEPTIME, VERBOSITY
 	args = sys.argv[1:]
 	LOOPFILE = None
 	if not args:
 		LOOPFILE = "Loopfile"
-	if (len(args) >= 2) and (args[0] == '-F'):
-		LOOPFILE = args[1]
-		args = args[2:]
+	while args:
+		if args[0] == "-F" and len(args) >= 2:
+			args.pop(0)
+			LOOPFILE = args.pop(0)
+		elif args[0] == "-L":
+			LOOPFILE = "Loopfile"
+			args.pop(0)
+		elif args[0] == '-q':
+			args.pop(0)
+			VERBOSITY -= 1
+		elif args[0] == '-v':
+			args.pop(0)
+			VERBOSITY += 1
+		elif args[0] == '-f':
+			args.pop(0)
+			SLEEPTIME /= 4
+		else:
+			break
 	if LOOPFILE:
 		if not os.path.exists(LOOPFILE):
 			usage()
@@ -153,9 +174,7 @@ class Task:
 		WAIT = True
 		self.HEAD = ''
 		self.BACKGROUND = False
-		self.VERBOSITY = 0
 		self.ALWAYS = False
-		global SLEEPTIME
 
 		while args and args[0].startswith('-'):
 			opt = args.pop(0)
@@ -169,14 +188,8 @@ class Task:
 				AUTOWATCH = False
 			elif opt == '-d':
 				self.BACKGROUND = True
-			elif opt == '-q':
-				self.VERBOSITY -= 1
-			elif opt == '-v':
-				self.VERBOSITY += 1
 			elif opt == '-a':
 				self.ALWAYS = True
-			elif opt == '-f':
-				SLEEPTIME /= 4
 			elif opt == '-x':
 				WAIT = False
 			else:
@@ -209,7 +222,7 @@ class Task:
 		if WAIT and not self.BACKGROUND:
 			self.mtime = [os.stat(filename).st_mtime for filename in self.filenames
 										if os.path.exists(filename)]
-		if self.VERBOSITY > 0:
+		if VERBOSITY > 0:
 			print 'looping:', self.command, '--', ' '.join(self.filenames)
 
 
@@ -225,7 +238,7 @@ class Task:
 				print '$ ' + self.command
 				os.system(self.command + self.HEAD)
 				self.mtime = m
-				if not (self.VERBOSITY < 0 or self.ALWAYS):
+				if not (VERBOSITY < 0 or self.ALWAYS):
 					print "############################################################"
 					print "Watching:", ', '.join(self.filenames)
 
