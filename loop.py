@@ -1,10 +1,12 @@
 #!/usr/bin/python
+# coding=utf-8
 
-"""Usage: loop.py OPTS COMMAND [-- WATCH...]
-			 loop.py OPTS COMMAND [-- WATCH...] ++ OPTS COMMAND [-- WATCH...] ...
-			 loop.py --for NAME in FILE do OPTS COMMAND [-- WATCH...] ...
-			 loop.py [-L ARGS]
-			 loop.py -F LOOPFILE ARGS
+"""
+Usage: loop.py OPTS COMMAND [-- WATCH...]
+	   loop.py OPTS COMMAND [-- WATCH...] ++ OPTS COMMAND [-- WATCH...] ...
+	   loop.py --for NAME in FILE do OPTS COMMAND [-- WATCH...] ...
+	   loop.py [-L ARGS]
+	   loop.py -F LOOPFILE ARGS
 
 Wait for changes to FILEs NAMEd on the command line, Run the COMMAND
 whenever one of them changes. (However, filenames following a '>' in
@@ -135,15 +137,22 @@ def main():
 			except IndexError:
 				usage()
 
-	tasks = map(Task, tasks)
+	for i in range(len(tasks)):
+		tasks[i] = Task(tasks[i], "[%d] " % (i + 1) if len(tasks) > 1 else "")
 
 	while True:
 		for task in tasks:
 			task.checkForChanges()
 
-		if enterKeyHasBeenHit():
-			for task in tasks:
-				task.mtime = None
+		hit = enterKeyHasBeenHit()
+		if hit:
+			try:
+				hit = int(hit)
+				if 0 < hit and hit <= len(tasks):
+					tasks[hit - 1].mtime = None
+			except ValueError:
+				for task in tasks:
+					task.mtime = None
 		else:
 			try:
 				time.sleep(SLEEPTIME)
@@ -167,7 +176,7 @@ def main():
 
 
 class Task:
-	def __init__(self, args):
+	def __init__(self, args, index):
 		IGNORE = set()
 		WATCH = set()
 		AUTOWATCH = True
@@ -175,6 +184,7 @@ class Task:
 		self.HEAD = ''
 		self.BACKGROUND = False
 		self.ALWAYS = False
+		self.index = index
 
 		while args and args[0].startswith('-'):
 			opt = args.pop(0)
@@ -222,8 +232,8 @@ class Task:
 		if WAIT and not self.BACKGROUND:
 			self.mtime = [os.stat(filename).st_mtime for filename in self.filenames
 										if os.path.exists(filename)]
-		if VERBOSITY > 0:
-			print 'looping:', self.command, '--', ' '.join(self.filenames)
+		if VERBOSITY >= 0:
+			print self.index + 'Looping:', self.command, '--', ' '.join(self.filenames)
 
 
 	def checkForChanges(self):
@@ -235,13 +245,14 @@ class Task:
 		if not self.BACKGROUND:
 
 			if self.mtime != m:
-				print '$ ' + self.command
+				if VERBOSITY >= 0:
+					print "―" * 78
+					print self.index + 'Running:', self.command
 				os.system(self.command + self.HEAD)
 				self.mtime = m
-				if not (VERBOSITY < 0 or self.ALWAYS):
-					print "############################################################"
-					print "Watching:", ', '.join(self.filenames)
-
+				if VERBOSITY - (1 if self.ALWAYS else 0) >= 0:
+					print "―" * 78
+					print self.index + 'Watching:', ', '.join(self.filenames)
 		else:
 
 			if self.mtime != m:
