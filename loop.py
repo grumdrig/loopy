@@ -3,7 +3,8 @@
 """Usage: loop.py OPTS COMMAND [-- WATCH...]
 			 loop.py OPTS COMMAND [-- WATCH...] ++ OPTS COMMAND [-- WATCH...] ...
 			 loop.py --for NAME in FILE do OPTS COMMAND [-- WATCH...] ...
-			 loop.py [-F LOOPFILE]
+			 loop.py [-L ARGS]
+			 loop.py -F LOOPFILE ARGS
 
 Wait for changes to FILEs NAMEd on the command line, Run the COMMAND
 whenever one of them changes. (However, filenames following a '>' in
@@ -17,11 +18,12 @@ OPTS:
 	-I        Ignore all command line names not explicitly in WATCH
 	-d        'Daemon' mode - start task in background and restart as needed
 	-q        Print less info
-	-V        Print more info
+	-v        Print more info
 	-a        Always restart when command quits
 	-f        Faster polling for changes (applies to all command watch loops)
 	-x        Run command once on startup without waiting for changes
 	-F FNAME  Load the loopfile FNAME
+	-L        Same as `-F Loopfile`
 
 WATCH: Files listed after -- or specified with -w are watched for changes
 			 without being part of the command
@@ -31,6 +33,9 @@ Multiple command watch loops can be specified by separating them with ++.
 Specifying a loopfile with -F causes the options and commands to be read
 from lines in the loopfile. Each nonblank line is parsed as if they were
 on the command line. Lines beginning with "#" are treated as comments.
+
+Arguments after -F FNAME or -L are passed to the loopfile as $1, $2, etc.
+These and other environment variables are substituted in the loopfile.
 
 Running loop.py without any arguments causes it to look for the loopfile
 named "Loopfile" in the current directory.
@@ -42,6 +47,12 @@ Hitting the enter key causes all commands to run (and/or daemons to be restarted
 EXAMPLES:
 	loop.py gcc test.c
 		Recompile test.c whenever it changes
+
+	loop.py a.out
+		Run a.out whenever it changes
+
+	loop.py gcc test.c ++ a.out
+		Do both
 
 	loop.py make test -- *.c *.h
 		Run make whenever a .c or .h file changes
