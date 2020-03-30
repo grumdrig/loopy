@@ -1,12 +1,11 @@
 #!/usr/bin/python
 # coding=utf-8
 
-"""
-Usage: loop.py OPTS COMMAND [-- WATCH...]
-	   loop.py OPTS COMMAND [-- WATCH...] ++ OPTS COMMAND [-- WATCH...] ...
-	   loop.py --for NAME in FILE do OPTS COMMAND [-- WATCH...] ...
-	   loop.py [-L ARGS]
-	   loop.py -F LOOPFILE ARGS
+"""Usage: loop.py OPTS COMMAND [-- WATCH...]
+       loop.py OPTS COMMAND [-- WATCH...] ++ OPTS COMMAND [-- WATCH...] ...
+       loop.py --for NAME in FILE do OPTS COMMAND [-- WATCH...] ...
+       loop.py [-L ARGS]
+       loop.py -F LOOPFILE ARGS
 
 Wait for changes to FILEs NAMEd on the command line, Run the COMMAND
 whenever one of them changes. (However, filenames following a '>' in
@@ -16,7 +15,7 @@ from being watched.)
 Initial OPTS:
 	-q        Print less info
 	-v        Print more info
-	-f        Faster polling for changes (applies to all command watch loops)
+	-f        Faster polling for changes
 	-F FNAME  Load the loopfile FNAME
 	-L        Same as `-F Loopfile`
 These options must come first, and apply to all command loops.
@@ -29,7 +28,7 @@ Per-command OPTS:
 	-d        'Daemon' mode - start task in background and restart as needed
 	-a        Always restart when command quits
 	-x        Run command once on startup without waiting for changes
-	--for...  Explained below
+	--for...  Apply command to multiple parameters, explained below
 
 WATCH: Files listed after -- or specified with -w are watched for changes
 			 without being part of the command
@@ -47,9 +46,11 @@ Running loop.py without any arguments causes it to look for the loopfile
 named "Loopfile" in the current directory.
 
 Command loops can be duplicated for multiple files with `--for`. The
-pattern is `--for VAR in ARG1 ARG2 ... do ...`.
+pattern is `--for VAR in ARG1 ARG2 ... do ...`. In the command, VAR will
+be replaced with each ARG in turn.
 
-Hitting the enter key causes all commands to run (and/or daemons to be restarted).
+Hitting the enter key causes all commands to run (and/or daemons to be
+restarted). Or hitting <task number> <enter> will trigger just that command.
 
 EXAMPLES:
 	loop.py gcc test.c
