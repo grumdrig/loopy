@@ -43,7 +43,8 @@ Arguments after -F FNAME or -L are passed to the loopfile as $1, $2, etc.
 These and other environment variables are substituted in the loopfile.
 
 Running loop.py without any arguments causes it to look for the loopfile
-named "Loopfile" in the current directory.
+named "Loopfile" in the current directory. The Loopfile contains command line
+arguments that would otherwise be passed to loop.py.
 
 Command loops can be duplicated for multiple files with `--for`. The
 pattern is `--for VAR in ARG1 ARG2 ... do ...`. In the command, VAR will
