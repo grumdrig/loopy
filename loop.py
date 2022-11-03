@@ -86,9 +86,10 @@ import os, sys, time, itertools, signal, glob
 
 SLEEPTIME = 1
 VERBOSITY = 0
+TASKS = []
 
 def main():
-	global SLEEPTIME, VERBOSITY
+	global SLEEPTIME, VERBOSITY, TASKS
 	args = sys.argv[1:]
 	LOOPFILE = None
 	if not args:
@@ -112,15 +113,48 @@ def main():
 		else:
 			break
 	if LOOPFILE:
-		if not os.path.exists(LOOPFILE):
-			usage()
-		os.environ["#"] = str(len(args))
-		for i,a in enumerate(args):
-			os.environ[str(i+1)] = a
-		tasks = [os.path.expandvars(line).split() for line in open(LOOPFILE, "rt").readlines() if line.strip() and line[0] != "#"]
+		TASKS = parseLoopfile(LOOPFILE, args)
 	else:
 		tasks = [list(g) for k,g in itertools.groupby(args, lambda x: x != '++') if k]
+		TASKS = processTaskList(tasks)
 
+	while True:
+		for task in TASKS:
+			task.checkForChanges()
+
+		hit = enterKeyHasBeenHit()
+		if hit:
+			try:
+				hit = int(hit)
+				if 0 < hit and hit <= len(TASKS):
+					TASKS[hit - 1].mtime = None
+			except ValueError:
+				for task in TASKS:
+					task.mtime = None
+		else:
+			try:
+				time.sleep(SLEEPTIME)
+			except KeyboardInterrupt:
+				killed = 0
+				for task in TASKS:
+					if task.pid:
+						print "\nKilling", task.pid
+						os.kill(task.pid, signal.SIGTERM)
+						task.pid = None
+						killed += 1
+				if killed:
+					print "^C again to quit"
+					try:
+						time.sleep(1)
+					except KeyboardInterrupt:
+						print
+						sys.exit(0)
+				else:
+					sys.exit(0)
+
+
+def processTaskList(tasks):
+	"""Turn text task lists into Task objects"""
 	# expand --for loops
 	for i in range(len(tasks)-1, -1, -1):
 		task = tasks[i]
@@ -142,39 +176,7 @@ def main():
 	for i in range(len(tasks)):
 		tasks[i] = Task(tasks[i], "[%d] " % (i + 1) if len(tasks) > 1 else "")
 
-	while True:
-		for task in tasks:
-			task.checkForChanges()
-
-		hit = enterKeyHasBeenHit()
-		if hit:
-			try:
-				hit = int(hit)
-				if 0 < hit and hit <= len(tasks):
-					tasks[hit - 1].mtime = None
-			except ValueError:
-				for task in tasks:
-					task.mtime = None
-		else:
-			try:
-				time.sleep(SLEEPTIME)
-			except KeyboardInterrupt:
-				killed = 0
-				for task in tasks:
-					if task.pid:
-						print "\nKilling", task.pid
-						os.kill(task.pid, signal.SIGTERM)
-						task.pid = None
-						killed += 1
-				if killed:
-					print "^C again to quit"
-					try:
-						time.sleep(1)
-					except KeyboardInterrupt:
-						print
-						sys.exit(0)
-				else:
-					sys.exit(0)
+	return tasks
 
 
 class Task:
@@ -267,6 +269,20 @@ class Task:
 					self.pid = restart(self.pid, self.command)
 
 
+class LoopfileTask:
+	def __init__(self, loopfile, args):
+		self.loopfile = loopfile
+		self.args = args
+		self.mtime = os.stat(loopfile).st_mtime
+
+	def checkForChanges(self):
+		global TASKS
+		if self.mtime != os.stat(self.loopfile).st_mtime:
+			if VERBOSITY >= 0:
+				print 'Reloading loopfile:', self.loopfile
+			TASKS = parseLoopfile(self.loopfile, self.args)
+
+
 def usage():
 		print __doc__
 		sys.exit()
@@ -288,6 +304,23 @@ def restart(pid, command):
 	pid = os.spawnlp(os.P_NOWAIT, command[0], *command)
 	print "Started pid", pid
 	return pid
+
+
+def parseLoopfile(loopfile, args):
+	if not os.path.exists(loopfile):
+		usage()
+	os.environ["#"] = str(len(args))
+	for i,a in enumerate(args):
+		os.environ[str(i+1)] = a
+	tasks = [os.path.expandvars(line).split() for line in open(loopfile, "rt").readlines() if line.strip() and line[0] != "#"]
+
+	tasks = processTaskList(tasks)
+
+	# also watch for changes to the loopfile itself
+	tasks.append(LoopfileTask(loopfile, args))
+
+	return tasks
+
 
 
 if __name__ == '__main__':
