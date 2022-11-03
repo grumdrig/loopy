@@ -46,7 +46,7 @@ Running loop.py without any arguments causes it to look for the loopfile
 named "Loopfile" in the current directory.
 
 Command loops can be duplicated for multiple files with `--for`. The
-pattern is `--for VAR in ARG1 ARG2 ... do ...`. In the command, VAR will
+pattern is `--for VAR in ARG1 ARG2 ... do ...`. In the command, $VAR will
 be replaced with each ARG in turn.
 
 Hitting the enter key causes all commands to run (and/or daemons to be
@@ -76,11 +76,11 @@ EXAMPLES:
 		Recompile "program" when program.swift or the library changes. And:
 		Run the program whenever it is regenerated.
 
-	loop.py --for FILE in *.c do cc -o FILE
+	loop.py --for FILE in *.c do cc -o $FILE
 		Compile any C file that changes
 """
 
-import os, sys, time, itertools, signal, glob
+import os, sys, time, itertools, signal, glob, subprocess
 
 
 SLEEPTIME = 1
@@ -116,6 +116,7 @@ def main():
 		os.environ["#"] = str(len(args))
 		for i,a in enumerate(args):
 			os.environ[str(i+1)] = a
+		# perhaps I'll want to change this call to expandEvironmentVars if need better handling of command line args
 		tasks = [os.path.expandvars(line).split() for line in open(LOOPFILE, "rt").readlines() if line.strip() and line[0] != "#"]
 	else:
 		tasks = [list(g) for k,g in itertools.groupby(args, lambda x: x != '++') if k]
@@ -132,7 +133,10 @@ def main():
 				values, task = task[3:ido], task[ido+1:]
 				if LOOPFILE:
 					values = [found for value in values for found in (glob.glob(value) if value != "$*" else args)]
-				subtasks = map(lambda value: map(lambda a: a.replace(variable, value), task), values)
+				def repl(a, variable, value):
+					os.environ[variable] = value
+					return expandEnvironmentVars(a)
+				subtasks = map(lambda value: map(lambda a: repl(a, variable, value), task), values)
 				tasks[i:i+1] = subtasks
 
 			except IndexError:
@@ -175,6 +179,10 @@ def main():
 				else:
 					sys.exit(0)
 
+
+def expandEnvironmentVars(s):
+	# Let bash expand environment vars, which allows stuff like "${var%.newext}.newext"
+	subprocess.check_output(["bash","-c","echo \"{}\"".format(a)]).strip()
 
 class Task:
 	def __init__(self, args, index):
