@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-"""Usage: loop.py OPTS COMMAND [-- WATCH...]
-       loop.py OPTS COMMAND [-- WATCH...] ++ OPTS COMMAND [-- WATCH...] ...
-       loop.py --for NAME in FILE do OPTS COMMAND [-- WATCH...] ...
-       loop.py [-L ARGS]
-       loop.py -F LOOPFILE ARGS
+"""Usage: loo.py OPTS COMMAND [-- WATCH...]
+       loo.py OPTS COMMAND [-- WATCH...] ++ OPTS COMMAND [-- WATCH...] ...
+       loo.py --for NAME in FILE do OPTS COMMAND [-- WATCH...] ...
+       loo.py [-L ARGS]
+       loo.py -F LOOPFILE ARGS
 
 Wait for changes to FILEs NAMEd on the command line, Run the COMMAND
 whenever one of them changes. (However, filenames following a '>' in
@@ -42,9 +42,9 @@ on the command line. Lines beginning with "#" are treated as comments.
 Arguments after -F FNAME or -L are passed to the loopfile as $1, $2, etc.
 These and other environment variables are substituted in the loopfile.
 
-Running loop.py without any arguments causes it to look for the loopfile
+Running loo.py without any arguments causes it to look for the loopfile
 named "Loopfile" in the current directory. The Loopfile contains command line
-arguments that would otherwise be passed to loop.py.
+arguments that would otherwise be passed to loo.py.
 
 Command loops can be duplicated for multiple files with `--for`. The
 pattern is `--for VAR in ARG1 ARG2 ... do ...`. In the command, $VAR will
@@ -54,30 +54,30 @@ Hitting the enter key causes all commands to run (and/or daemons to be
 restarted). Or hitting <task number> <enter> will trigger just that command.
 
 EXAMPLES:
-	loop.py gcc test.c
+	loo.py gcc test.c
 		Recompile test.c whenever it changes
 
-	loop.py a.out
+	loo.py a.out
 		Run a.out whenever it changes
 
-	loop.py gcc test.c ++ a.out
+	loo.py gcc test.c ++ a.out
 		Do both
 
-	loop.py make test -- *.c *.h
+	loo.py make test -- *.c *.h
 		Run make whenever a .c or .h file changes
 
-	loop.py sed s/day/night/ \\< dayfile \\> nightfile
+	loo.py sed s/day/night/ \\< dayfile \\> nightfile
 		Run sed whenever dayfile changes to produce nightfile. Note that
 		the io redirection operators must be escaped. Also note that
 		though nightfile is mentioned in the command, it's after a '>'
 		and therefore not watched.
 
-	loop.py swiftc -emit-library helper.swift ++ swiftc -lhelper program.swift -- libhelper.dylib ++ ./program
+	loo.py swiftc -emit-library helper.swift ++ swiftc -lhelper program.swift -- libhelper.dylib ++ ./program
 		Recompile the library "helper" when "helper.swift" changes. And:
 		Recompile "program" when program.swift or the library changes. And:
 		Run the program whenever it is regenerated.
 
-	loop.py --for FILE in *.c do cc -o $FILE
+	loo.py --for FILE in *.c do cc -o $FILE
 		Compile any C file that changes
 """
 
