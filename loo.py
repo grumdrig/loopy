@@ -7,17 +7,19 @@
        loo.py [-L ARGS]
        loo.py -F LOOPFILE ARGS
 
-Wait for changes to FILEs NAMEd on the command line, Run the COMMAND
-whenever one of them changes. (However, filenames following a '>' in
-the command are not watched. AND preceding a filename with @ keeps it
-from being watched.)
+Wait for changes to FILEs NAMEd on the command line, Run the COMMAND whenever
+one of them changes.
+
+However, filenames regarded as output files or explicitly ignored are not
+watched for changes. Output files are those following following a '>' in the
+command, preceded in the command with `@`, or listed using the -o flag.
 
 Initial OPTS:
 	-q        Print less info
 	-v        Print more info
 	-f        Faster polling for changes
 	-F FNAME  Load the loopfile FNAME
-	-L        Same as `-F Loopfile`
+	-L        Load the loopfile `Loopfile`
 These options must come first, and apply to all command loops.
 
 Per-command OPTS:
@@ -25,18 +27,27 @@ Per-command OPTS:
 	-w FNAME  Watch FNAME for changes
 	-i FNAME  Ignore changes to FNAME even if appears in COMMAND or WATCH
 	-I        Ignore all command line names not explicitly in WATCH
+	-o FNAME  Treat FNAME as an output file. Ignore it, and see below.
 	-d        'Daemon' mode - start task in background and restart as needed
 	-a        Always restart when command quits
-	-x        Run command once on startup without waiting for changes
+	-x        Run command (once) upon startup without waiting for changes
 	--for...  Apply command to multiple parameters, explained below
 
-WATCH: Files listed after -- or specified with -w are watched for changes
-       without needing to be part of the command. Although names found in
-       the command are implicitly watched for changes IF they are found
-       at startup, explicitly listed files are watched whether they exist
-       initially or not.
+WATCH: Files listed after -- or specified with -w are also watched for
+	changes. Although names found in the command are implicitly watched for
+	changes IF they are found at startup, explicitly listed files are watched
+	whether they exist initially or not.
+
+Run at startup mode as triggered by the -x option is activated automatically
+if any output file is missing at startup. To avoid this behavior, ignore the
+file instead (such as with -i).
 
 Multiple command watch loops can be specified by separating them with ++.
+
+Hitting the enter key causes all commands to run (and/or daemons to be
+restarted). Or hitting <task number> <enter> will trigger just that command.
+
+LOOPFILES:
 
 Specifying a loopfile with -F causes the options and commands to be read
 from lines in the loopfile. Each nonblank line is parsed as if they were
@@ -53,9 +64,6 @@ Command loops can be duplicated for multiple files with `--for`. The
 pattern is `--for VAR in ARG1 ARG2 ... do ...`. In the command, $VAR will
 be replaced with each ARG in turn.
 
-Hitting the enter key causes all commands to run (and/or daemons to be
-restarted). Or hitting <task number> <enter> will trigger just that command.
-
 EXAMPLES:
 	loo.py gcc test.c
 		Recompile test.c whenever it changes
@@ -67,7 +75,7 @@ EXAMPLES:
 		Do both
 
 	loo.py make test -- *.c *.h
-		Run make whenever a .c or .h file changes
+		Run `make test` whenever a .c or .h file changes
 
 	loo.py sed s/day/night/ \\< dayfile \\> nightfile
 		Run sed whenever dayfile changes to produce nightfile. Note that
@@ -194,6 +202,7 @@ class Task:
 	def __init__(self, args, index):
 		IGNORE = set()
 		WATCH = set()
+		OUTPUTS = set()
 		AUTOWATCH = True
 		WAIT = True
 		self.HEAD = ''
@@ -211,6 +220,8 @@ class Task:
 				IGNORE.add(args.pop(0))
 			elif opt == '-I':
 				AUTOWATCH = False
+			elif opt == '-o':
+				OUTPUTS.add(args.pop(0))
 			elif opt == '-d':
 				self.BACKGROUND = True
 			elif opt == '-a':
@@ -223,24 +234,30 @@ class Task:
 		for i in range(len(args)):
 			if args[i][:1] == '@':
 				args[i] = args[i][1:]
-				IGNORE.add(args[i])
+				OUTPUTS.add(args[i])
 
 		if not args:
 			usage()
 
 		# Split args into [COMMAND, WATCH]
 		cfi = [list(g) for k,g in itertools.groupby(args, lambda x: x != '--') if k]
-
 		self.command = cfi.pop(0)
-		filenames = [a for a,b in zip(self.command, [0] + self.command[:-1]) if b != '>']
+
+		OUTPUTS |= set([a for a,b in zip(self.command, [0] + self.command[:-1]) if b == '>'])
+		OUTPUTS -= IGNORE
+
+		filenames = self.command
 		filenames = set([f for f in filenames if os.path.exists(f) and AUTOWATCH])
 		filenames |= set(cfi and cfi.pop(0))
 		filenames |= WATCH
 		filenames -= IGNORE
+		filenames -= OUTPUTS
 		self.filenames = filenames
 
 		if not self.BACKGROUND:
 			self.command = ' '.join(self.command)
+
+		WAIT &= not any(not os.path.exists(output) for output in OUTPUTS)
 
 		self.pid = None
 		self.mtime = None
