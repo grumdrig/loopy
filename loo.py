@@ -31,7 +31,10 @@ Per-command OPTS:
 	--for...  Apply command to multiple parameters, explained below
 
 WATCH: Files listed after -- or specified with -w are watched for changes
-			 without being part of the command
+       without needing to be part of the command. Although names found in
+       the command are implicitly watched for changes IF they are found
+       at startup, explicitly listed files are watched whether they exist
+       initially or not.
 
 Multiple command watch loops can be specified by separating them with ++.
 
