@@ -10,7 +10,7 @@
 Wait for changes to FILEs NAMEd on the command line (except output files), and
 run the COMMAND whenever one of them changes.
 
-Multiple such watchlists may be listed in a Loopfile, (or using ++)
+Multiple such watchlists may be listed in a Loopfile (or using ++),
 implementing as simple build system.
 
 Initial OPTS:
