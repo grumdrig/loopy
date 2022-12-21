@@ -169,7 +169,7 @@ def main():
 
 def expandEnvironmentVars(s):
 	# Let bash expand environment vars, which allows stuff like "${var%.newext}.newext"
-	return subprocess.check_output(["bash","-c","echo \"{}\"".format(s)]).strip()
+	return subprocess.check_output(["bash","-c","echo \"{}\"".format(s)], universal_newlines=True).strip()
 
 
 def processTaskList(tasks):
@@ -188,7 +188,7 @@ def processTaskList(tasks):
 				def repl(a, variable, value):
 					os.environ[variable] = value
 					return expandEnvironmentVars(a)
-				subtasks = map(lambda value: map(lambda a: repl(a, variable, value), task), values)
+				subtasks = [[repl(a, variable, value) for a in task] for value in values]
 				tasks[i:i+1] = subtasks
 
 			except IndexError:
