@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding=utf-8
 
 """Usage: loo.py OPTS COMMAND [-- WATCH...]
@@ -138,12 +138,12 @@ def main():
 				killed = 0
 				for task in TASKS:
 					if task.pid:
-						print "\nKilling", task.pid
+						print("\nKilling", task.pid)
 						os.kill(task.pid, signal.SIGTERM)
 						task.pid = None
 						killed += 1
 				if killed:
-					print "^C again to quit"
+					print("^C again to quit")
 					try:
 						time.sleep(1)
 					except KeyboardInterrupt:
@@ -245,7 +245,7 @@ class Task:
 			self.mtime = [os.stat(filename).st_mtime for filename in self.filenames
 										if os.path.exists(filename)]
 		if VERBOSITY >= 0:
-			print self.index + 'Looping:', self.command, '--', ' '.join(self.filenames)
+			print(self.index + 'Looping:', self.command, '--', ' '.join(self.filenames))
 
 
 	def checkForChanges(self):
@@ -258,13 +258,13 @@ class Task:
 
 			if self.mtime != m:
 				if VERBOSITY >= 0:
-					print "―" * 78
-					print self.index + 'Running:', self.command
+					print("―" * 78)
+					print(self.index + 'Running:', self.command)
 				os.system(self.command + self.HEAD)
 				self.mtime = m
 				if VERBOSITY - (1 if self.ALWAYS else 0) >= 0:
-					print "―" * 78
-					print self.index + 'Watching:', ', '.join(self.filenames)
+					print("―" * 78)
+					print(self.index + 'Watching:', ', '.join(self.filenames))
 		else:
 
 			if self.mtime != m:
@@ -287,12 +287,12 @@ class LoopfileTask:
 		global TASKS
 		if self.mtime != os.stat(self.loopfile).st_mtime:
 			if VERBOSITY >= 0:
-				print 'Reloading loopfile:', self.loopfile
+				print('Reloading loopfile:', self.loopfile)
 			TASKS = parseLoopfile(self.loopfile, self.args)
 
 
 def usage():
-		print __doc__
+		print(__doc__)
 		sys.exit()
 
 
@@ -307,10 +307,10 @@ def enterKeyHasBeenHit():
 
 def restart(pid, command):
 	if pid:
-		print "Killing pid", pid
+		print("Killing pid", pid)
 		os.kill(pid, signal.SIGTERM)
 	pid = os.spawnlp(os.P_NOWAIT, command[0], *command)
-	print "Started pid", pid
+	print("Started pid", pid)
 	return pid
 
 
