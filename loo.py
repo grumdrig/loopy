@@ -309,7 +309,7 @@ class LoopfileTask:
 		global TASKS
 		if self.mtime != os.stat(self.loopfile).st_mtime:
 			if VERBOSITY >= 0:
-				print 'Reloading loopfile:', self.loopfile
+				print '\nReloading loopfile:', self.loopfile
 			TASKS = parseLoopfile(self.loopfile, self.args)
 
 
