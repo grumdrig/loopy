@@ -166,7 +166,7 @@ def main():
 
 def expandEnvironmentVars(s):
 	# Let bash expand environment vars, which allows stuff like "${var%.newext}.newext"
-	subprocess.check_output(["bash","-c","echo \"{}\"".format(a)]).strip()
+	return subprocess.check_output(["bash","-c","echo \"{}\"".format(s)]).strip()
 
 
 def processTaskList(tasks):
@@ -181,8 +181,7 @@ def processTaskList(tasks):
 					usage()
 				ido = task.index('do')
 				values, task = task[3:ido], task[ido+1:]
-				if LOOPFILE:
-					values = [found for value in values for found in (glob.glob(value) if value != "$*" else args)]
+				values = [found for value in values for found in (glob.glob(value) if value != "$*" else args)]
 				def repl(a, variable, value):
 					os.environ[variable] = value
 					return expandEnvironmentVars(a)
@@ -335,6 +334,8 @@ def restart(pid, command):
 
 
 def parseLoopfile(loopfile, args):
+	saveTheEnvironment = os.environ.copy()
+
 	if not os.path.exists(loopfile):
 		usage()
 	os.environ["#"] = str(len(args))
@@ -347,6 +348,9 @@ def parseLoopfile(loopfile, args):
 
 	# also watch for changes to the loopfile itself
 	tasks.append(LoopfileTask(loopfile, args))
+
+	os.environ.clear()
+	os.environ.update(saveTheEnvironment)
 
 	return tasks
 
