@@ -7,12 +7,11 @@
        loo.py [-L ARGS]
        loo.py -F LOOPFILE ARGS
 
-Wait for changes to FILEs NAMEd on the command line, Run the COMMAND whenever
-one of them changes.
+Wait for changes to FILEs NAMEd on the command line (except output files), and
+run the COMMAND whenever one of them changes.
 
-However, filenames regarded as output files or explicitly ignored are not
-watched for changes. Output files are those following following a '>' in the
-command, preceded in the command with `@`, or listed using the -o flag.
+Multiple such watchlists may be listed in a Loopfile (or using ++),
+implementing a simple build system.
 
 Initial OPTS:
 	-q        Print less info
@@ -38,9 +37,13 @@ WATCH: Files listed after -- or specified with -w are also watched for
 	changes IF they are found at startup, explicitly listed files are watched
 	whether they exist initially or not.
 
-Run at startup mode as triggered by the -x option is activated automatically
-if any output file is missing at startup. To avoid this behavior, ignore the
-file instead (such as with -i).
+Filenames regarded as output files or explicitly ignored are not watched for
+changes. Output files are those following following a '>' in the command,
+preceded in the command with `@`, or listed using the -o flag.
+
+Run-at-startup mode (as otherwise triggered by the -x option) is activated
+automatically if any output file is missing at startup. To prevent this
+behavior, ignore the file instead (such as with -i).
 
 Multiple command watch loops can be specified by separating them with ++.
 
@@ -89,7 +92,7 @@ EXAMPLES:
 		Run the program whenever it is regenerated.
 
 	loo.py --for FILE in *.c do cc -o $FILE
-		Compile any C file that changes
+		Set watches to compile any C file that changes
 """
 
 import os, sys, time, itertools, signal, glob, subprocess

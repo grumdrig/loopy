@@ -1,0 +1,7 @@
+# This builds the readme from `loo.py -h`
+
+# Note that most Loofiles would not contain the loo.py command; this one does
+# because in this case loo.py is watching iself.
+
+-x ./loo.py -h > README.txt
+
