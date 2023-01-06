@@ -168,7 +168,7 @@ def main():
 
 
 def expandEnvironmentVars(s):
-	# Let bash expand environment vars, which allows stuff like "${var%.newext}.newext"
+	# Let bash expand environment vars, which allows stuff like "${var%.oldext}.newext"
 	return subprocess.check_output(["bash","-c","echo \"{}\"".format(s)], universal_newlines=True).strip()
 
 
